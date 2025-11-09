@@ -31,5 +31,3 @@
 
 **Día 7**  
 - QA cruzado, fixes y entrega final (capturas, PBIX, notebooks, scripts).
-
-> Gestión: trabajar en ramas `feat/<equipo>/<tarea>` y PR hacia `dev`.
