@@ -1,0 +1,56 @@
+
+KPIs y DAX del Proyecto – Rentabilidad y Retorno
+
+1. KPIs Solicitados
+--------------------
+
+SalesQuantity =
+    SalesQuantity = SUM(Sales[SalesQuantity])
+
+ReturnQuantity =
+    ReturnQuantity = SUM(Sales[ReturnQuantity])
+
+ReturnAmount =
+    ReturnAmount = SUM(Sales[ReturnAmount])
+
+SalesAmount =
+    SalesAmount = SUM(Sales[SalesAmount])
+
+Profit =
+    Profit = [SalesAmount] - [ReturnAmount]
+
+
+2. Gráficos Construidos
+------------------------
+• Retorno por PromotionName (barras)
+• Promedio de Retorno por fecha (líneas)
+• Profit y Evolución de ventas (combo columnas + líneas)
+
+
+3. Segmentadores Solicitados
+-----------------------------
+• ProductName
+• ProductSubcategoryName
+• PromotionName
+
+
+4. Filtros Requeridos
+----------------------
+Filtro a nivel de hoja:
+    ContinentName = “Europe” OR “North America”
+
+Filtro a nivel visual:
+    En el visual ‘Ventas por Fecha y Categoría’ excluir ProductCategoryName en blanco.
+
+
+5. DAX Adicionales Utilizados
+------------------------------
+
+AvgReturnPerDay =
+    AvgReturnPerDay = AVERAGE(Sales[ReturnAmount])
+
+SalesAmount_Total =
+    SalesAmount_Total = CALCULATE(SUM(Sales[SalesAmount]), ALL(Sales))
+
+Profit_Per_Category =
+    Profit_Per_Category = CALCULATE([Profit], ALLEXCEPT(DimProduct, DimProduct[ProductCategoryName]))
