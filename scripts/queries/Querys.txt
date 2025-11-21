@@ -1,0 +1,120 @@
+-- Total de ventas por tienda 
+SELECT 
+  st.StoreKey,
+  COUNT(*) AS TotalVentas
+FROM silver.sales_limpio s 
+JOIN silver.stores_limpio st ON s.StoreKey = st.StoreKey
+GROUP BY st.StoreKey;
+
+-- Listar los productos más vendidos 
+SELECT 
+  p.ProductName,
+  COUNT(*) AS TotalVentas
+FROM silver.sales_limpio AS s
+JOIN silver.product_limpio AS p ON s.ProductKey = p.ProductKey
+GROUP BY p.ProductName
+ORDER BY TotalVentas DESC;
+
+
+-- Ventas realizadas por año.
+SELECT 
+  YEAR(TRY_CAST(s.DateKey AS DATE)) AS Ano,
+  COUNT(*) AS TotalVentas
+FROM silver.sales_limpio AS s
+WHERE TRY_CAST(s.DateKey AS DATE) IS NOT NULL
+GROUP BY YEAR(TRY_CAST(s.DateKey AS DATE))
+ORDER BY Ano;
+
+
+-- Ventas promedio por canal 
+SELECT 
+  s.ChannelKey,
+  AVG(CantidadVentas) AS PromedioVentas
+FROM (
+  SELECT 
+    ChannelKey,
+    COUNT(*) AS CantidadVentas
+  FROM silver.sales_limpio
+  GROUP BY ChannelKey
+) AS s
+GROUP BY s.ChannelKey;
+
+--Tiendas con ventas mayores al promedio global
+
+WITH VentasPorTienda AS (
+  SELECT 
+    s.StoreKey,
+    COUNT(*) AS TotalVentas
+  FROM silver.sales_limpio AS s
+  GROUP BY s.StoreKey
+),
+PromedioGlobal AS (
+  SELECT 
+    AVG(TotalVentas * 1.0) AS Promedio
+  FROM VentasPorTienda
+)
+SELECT 
+  v.StoreKey,
+  v.TotalVentas
+FROM VentasPorTienda v
+CROSS JOIN PromedioGlobal p
+WHERE v.TotalVentas > p.Promedio
+ORDER BY v.TotalVentas DESC;
+
+-- Ventas por país y mes 
+SELECT 
+  g.RegionCountryName AS Pais,
+  YEAR(s.DateKey) AS Año,
+  MONTH(s.DateKey) AS Mes,
+  COUNT(*) AS TotalVentas
+FROM silver.sales_limpio s
+JOIN silver.stores_limpio st ON s.StoreKey = st.StoreKey
+JOIN silver.geography_limpio g ON st.GeographyKey = g.GeographyKey
+GROUP BY g.RegionCountryName, YEAR(s.DateKey), MONTH(s.DateKey)
+ORDER BY g.RegionCountryName, Año, Mes;
+
+-- Top 5 productos más vendidos por categoría  hecha con IA
+SELECT *
+FROM (
+  SELECT 
+    c.ProductCategory,
+    p.ProductName,
+    COUNT(*) AS TotalVentas,
+    ROW_NUMBER() OVER (
+      PARTITION BY c.ProductCategory 
+      ORDER BY COUNT(*) DESC
+    ) AS Posicion
+  FROM silver.sales_limpio s
+  JOIN silver.product_limpio p ON s.ProductKey = p.ProductKey
+  JOIN silver.productsubcategory_limpio sc ON p.ProductSubcategoryKey = sc.ProductSubcategoryKey
+  JOIN silver.productcategory_limpio c ON sc.ProductCategoryKey = c.ProductCategoryKey
+  GROUP BY c.ProductCategory, p.ProductName
+) t
+WHERE Posicion <= 5
+ORDER BY ProductCategory, Posicion;
+
+--Crecimiento mensual de ventas 
+
+SELECT 
+  DateKey AS Periodo,
+  SUM(SalesAmount) AS TotalVentas,
+  LAG(SUM(SalesAmount)) OVER (ORDER BY FORMAT(DateKey, 'yyyy-MM')) AS VentasMesAnterior,
+  ROUND(
+    (SUM(SalesAmount) - LAG(SUM(SalesAmount)) OVER (ORDER BY FORMAT(DateKey, 'yyyy-MM'))) * 100.0 /
+    NULLIF(LAG(SUM(SalesAmount)) OVER (ORDER BY FORMAT(DateKey, 'yyyy-MM')), 0), 2
+  ) AS CrecimientoPorcentual
+FROM silver.sales_limpio
+GROUP BY FORMAT(DateKey, 'yyyy-MM')
+ORDER BY Periodo;
+
+--Ventas ponderadas por descuento aplicado 
+
+SELECT 
+  DiscountAmount,
+  COUNT(*) AS Transacciones,
+  SUM(SalesAmount) AS VentasTotales,
+  ROUND(AVG(SalesAmount), 2) AS PromedioVenta,
+  ROUND(SUM(SalesAmount * DiscountAmount) / NULLIF(SUM(DiscountAmount), 0), 2) AS VentaPonderada
+FROM silver.sales_limpio
+GROUP BY DiscountAmount
+ORDER BY DiscountAmount;
